@@ -1,0 +1,22 @@
+[
+  {
+    "user_input": "What is the termination notice period?",
+    "reference": "The Commission may terminate the agreement for convenience by giving the Consultant 30 days' written notice. The Consultant may terminate the agreement by giving the Commission at least 120 days' advance written notice."
+  },
+  {
+    "user_input": "How much advance notice must the Consultant provide to terminate the agreement?",
+    "reference": "The Consultant must provide the Commission with at least 120 days' advance written notice to terminate the agreement."
+  },
+  {
+    "user_input": "How much notice must the Commission provide when terminating the agreement for convenience?",
+    "reference": "The Commission may terminate the agreement for convenience by giving the Consultant 30 days' written notice."
+  },
+  {
+    "user_input": "What happens if the Consultant breaches the agreement?",
+    "reference": "The Commission may terminate the agreement for the Consultant's default if the Consultant breaches a term or provision and does not cure the breach within 10 days after receiving written notice from the Commission."
+  },
+  {
+    "user_input": "When must the Consultant submit invoices?",
+    "reference": "Invoices must be submitted no later than 45 calendar days after the performance of the work for which the Consultant is billing."
+  }
+]
