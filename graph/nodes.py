@@ -8,6 +8,9 @@ import time
 from guardrails.research_guard import validate_search_query
 from guardrails.contract_guard import validate_contract_analysis
 from guardrails.output_guard import validate_final_report
+from security.retrieved_content_detector import (
+    detect_malicious_retrieved_content
+)
 
 
 def planner_node(state):
@@ -32,10 +35,17 @@ def retriever_node(state):
     search_query = state["search_query"]
 
     results = retrieve_documents(
-        query=search_query,
-        retrieval_k=15,
-        final_k=5,
+    query=search_query,
+    owner_id=state["owner_id"],
+    retrieval_k=15,
+    final_k=5,
     )
+
+    if not results:
+        print(f"No authorized documents found for the current user: {state['owner_id']}")
+        return {
+            "retrieved_chunks": []
+        }
 
     print(f"Final retrieved documents: {len(results)}")
 
@@ -44,6 +54,8 @@ def retriever_node(state):
         print(f"\n--- Rank {rank} ---")
         print(f"Page: {document.metadata.get('page_label')}")
         print(f"Content: {document.page_content[:500]}")
+
+    
 
     return {
         "retrieved_chunks": results
@@ -71,24 +83,50 @@ def contract_analyst_node(state):
 
     print("\n========== Contract Agent ==========")
 
-    print("\nRetrieved chunks passed to Contract Analyst:")
+    print("\nRetrieved chunks passed through security check:")
     print("=" * 80)
+
+    safe_chunks = []
 
     for rank, doc in enumerate(
         state["retrieved_chunks"],
         start=1
     ):
+
         print(f"\nContext Rank: {rank}")
         print(f"Page: {doc.metadata.get('page_label')}")
-        print(doc.page_content[:1000])
+
+        security_result = detect_malicious_retrieved_content(
+            doc.page_content
+        )
+
+        if security_result["is_malicious"]:
+
+            print("SECURITY: MALICIOUS CHUNK BLOCKED")
+            print(
+                f"Reason: {security_result['reason']}"
+            )
+
+            continue
+
+        print("SECURITY: SAFE")
+        safe_chunks.append(doc)
+
+    if not safe_chunks:
+        return {
+            "contract_analysis": (
+                "Unable to analyze the contract because "
+                "all retrieved content was flagged by security checks."
+            )
+        }
 
     contract_context = "\n\n".join(
         doc.page_content
-        for doc in state["retrieved_chunks"]
+        for doc in safe_chunks
     )
 
     print("\n" + "=" * 80)
-    print("Sending retrieved context to Contract Analyst...")
+    print("Sending SAFE retrieved context to Contract Analyst...")
     print("=" * 80)
 
     analysis = contract_analyst_agent(
@@ -101,7 +139,9 @@ def contract_analyst_node(state):
         ),
     )
 
-    is_valid, error_message = validate_contract_analysis(analysis)
+    is_valid, error_message = validate_contract_analysis(
+        analysis
+    )
 
     if not is_valid:
         print(f"Contract Guard: {error_message}")
@@ -114,7 +154,6 @@ def contract_analyst_node(state):
     return {
         "contract_analysis": analysis
     }
-
 
 
 def report_node(state):
@@ -141,4 +180,22 @@ def report_node(state):
 
     return {
         "final_report": final_report
+    }
+
+
+def unauthorized_document_node(state):
+
+    print("\n" + "=" * 80)
+    print("DOCUMENT ACCESS DENIED")
+    print("=" * 80)
+
+    message = (
+        "No authorized contract documents were found for this user. "
+        "You do not have access to the requested document."
+    )
+
+    print(f"\n{message}")
+
+    return {
+        "final_report": message
     }

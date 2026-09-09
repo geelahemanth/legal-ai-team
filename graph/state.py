@@ -6,6 +6,7 @@ class LegalState(TypedDict):
 
 
     question: str
+    owner_id: str
     analysis_type: str
     search_query: str
     retrieved_chunks: List[Document]

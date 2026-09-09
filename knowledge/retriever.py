@@ -2,27 +2,44 @@ from knowledge.vector_store import get_vector_store
 from retrieval.bm25_store import load_bm25_retriever
 from retrieval.cross_encoder_reranker import rerank_documents
 
-def retrieve_dense_documents(query: str, k: int = 5):
-    """Retrieve documents using dense vector similarity."""
+def retrieve_dense_documents(
+    query: str,
+    owner_id: str,
+    k: int = 5,
+):
+    """Retrieve only documents belonging to the current user."""
 
     vector_store = get_vector_store()
 
     results = vector_store.similarity_search(
         query,
         k=k,
+        filter={
+            "owner_id": owner_id
+        },
     )
 
     return results
 
 
-def retrieve_sparse_documents(query: str, k: int = 5):
-    """Retrieve documents using BM25 sparse retrieval."""
+def retrieve_sparse_documents(
+    query: str,
+    owner_id: str,
+    k: int = 5,
+):
+    """Retrieve BM25 results belonging only to the current user."""
 
     bm25 = load_bm25_retriever()
 
     results = bm25.invoke(query)
 
-    return results[:k]
+    filtered_results = [
+        document
+        for document in results
+        if document.metadata.get("owner_id") == owner_id
+    ]
+
+    return filtered_results[:k]
 
 
 def reciprocal_rank_fusion(
@@ -84,6 +101,7 @@ def reciprocal_rank_fusion(
 
 def retrieve_documents(
     query: str,
+    owner_id: str,
     retrieval_k: int = 15,
     final_k: int = 5,
 ):
@@ -106,18 +124,20 @@ def retrieve_documents(
     # ---------------------------------------------------------
 
     dense_results = retrieve_dense_documents(
-        query=query,
-        k=retrieval_k,
-    )
+    query=query,
+    owner_id=owner_id,
+    k=retrieval_k,
+)
 
     # ---------------------------------------------------------
     # 2. Sparse retrieval
     # ---------------------------------------------------------
 
     sparse_results = retrieve_sparse_documents(
-        query=query,
-        k=retrieval_k,
-    )
+    query=query,
+    owner_id=owner_id,
+    k=retrieval_k,
+)
 
     # ---------------------------------------------------------
     # 3. Reciprocal Rank Fusion

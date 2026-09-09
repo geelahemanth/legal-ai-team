@@ -1,9 +1,7 @@
-from tracemalloc import start
 from graph.workflow import build_graph
-import time
-from guardrails.input_guard import validate_user_input
-from knowledge.ingest import ingest_pdf
 
+from guardrails.input_guard import validate_user_input
+from security.semantic_input_detector import detect_semantic_attack
 
 
 def main():
@@ -13,17 +11,45 @@ def main():
 
     question = input("\nEnter your legal question: ").strip()
 
-    if not question:
-        print("Please enter a question.")
+    # =========================================================
+    # LAYER 1 — BASIC / RULE-BASED INPUT SECURITY
+    # =========================================================
+
+    is_valid, reason = validate_user_input(question)
+
+    if not is_valid:
+        print("\n" + "=" * 80)
+        print("INPUT BLOCKED")
+        print("=" * 80)
+        print(f"\nReason: {reason}")
         return
 
-    # Build the LangGraph workflow
+    # =========================================================
+    # LAYER 2 — SEMANTIC SECURITY DETECTION
+    # =========================================================
+
+    security_result = detect_semantic_attack(question)
+
+    if security_result["is_attack"]:
+        print("\n" + "=" * 80)
+        print("SECURITY BLOCKED")
+        print("=" * 80)
+
+        print(f"\nAttack Type: {security_result['attack_type']}")
+        print(f"Reason: {security_result['reason']}")
+        return
+
+    # =========================================================
+    # SAFE INPUT → START AGENT WORKFLOW
+    # =========================================================
+
     graph = build_graph()
 
     print("\nProcessing your question...\n")
 
     initial_state = {
         "question": question,
+        "owner_id": "user_999",
     }
 
     try:
@@ -50,4 +76,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

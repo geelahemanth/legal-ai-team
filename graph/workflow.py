@@ -1,12 +1,18 @@
 from langgraph.graph import StateGraph, START, END
 from graph.state import LegalState
-from graph.nodes import (planner_node, research_node, retriever_node, contract_analyst_node,report_node)
+from graph.nodes import (planner_node, research_node, retriever_node, contract_analyst_node,report_node, unauthorized_document_node,)
 
-def should_research(state):
+def route_after_retrieval(state):
 
+    # No authorized documents were retrieved
+    if not state["retrieved_chunks"]:
+        return "unauthorized"
+
+    # Authorized documents exist + research required
     if state["requires_research"]:
         return "research"
 
+    # Authorized documents exist + no research required
     return "contract_analyst"
 
 
@@ -22,6 +28,7 @@ def build_graph():
     builder.add_node("research", research_node)
     builder.add_node("contract_analyst", contract_analyst_node)
     builder.add_node("report", report_node)
+    builder.add_node("unauthorized", unauthorized_document_node)
 
 
     #Define workflow
@@ -29,17 +36,19 @@ def build_graph():
 
     builder.add_edge("planner", "retriever")
     builder.add_conditional_edges(
-        "retriever", 
-        should_research,
-        {
-            "research": "research",
-            "contract_analyst": "contract_analyst"
-        }
-    )
+    "retriever",
+    route_after_retrieval,
+    {
+        "unauthorized": "unauthorized",
+        "research": "research",
+        "contract_analyst": "contract_analyst",
+    }
+)
     
     builder.add_edge("research", "contract_analyst")
     builder.add_edge("contract_analyst", "report")
     builder.add_edge("report", END)
+    builder.add_edge("unauthorized", END)
 
     #graph compile
     graph = builder.compile()
