@@ -2,6 +2,11 @@ from langgraph.graph import StateGraph, START, END
 from graph.state import LegalState
 from graph.nodes import (planner_node, research_node, retriever_node, contract_analyst_node,report_node, unauthorized_document_node,)
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
+
 def route_after_retrieval(state):
 
     # No authorized documents were retrieved
